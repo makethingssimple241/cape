@@ -1,15 +1,33 @@
 import importlib
 import inspect
 import os
+import shutil
 import sys
+import traceback
 
 class Recipe:
     def __init__(self, outputs):
         self.outputs = outputs
         self.is_ran = False
 
-    def run(self):
-        pass
+    def run(self) -> int:
+        return 0
+    
+class ComplexRecipe:
+    def __init__(self, *recipes):
+        self.outputs = []
+        for recipe in recipes:
+            self.outputs += recipe.outputs
+
+        self.recipes = recipes
+
+    def run(self) -> int:
+        for recipe in self.recipes:
+            exit_code = recipe.run()
+            if exit_code != 0:
+                return exit_code
+            
+        return 0
 
 class cc(Recipe):
     def __init__(self, **kwargs):
@@ -53,6 +71,25 @@ class cc(Recipe):
                 assert False
 
         return os.system(cmd)
+    
+class cp(Recipe):
+    def __init__(self, sources, destination):
+        self.outputs = [destination]
+        self.sources = sources
+
+    def run(self) -> int:
+        for source in self.sources:
+            shutil.copy2(source, self.outputs[0])
+
+        return 0
+    
+class sh(Recipe):
+    def __init__(self, sh):
+        self.sh = sh
+        self.outputs = []
+
+    def run(self) -> int:
+        return os.system(f"sh {self.sh}")
     
 class CapeError(Exception):
     def __init__(self, target, code = None):
@@ -157,7 +194,7 @@ def target(*prerequesties):
         return make
     return decorator
 
-if __name__ == "__main__":
+def main():
     importlib.import_module("build")
     functions = inspect.getmembers(sys.modules["build"], inspect.isfunction)
     targets = [function for name, function in functions if hasattr(function, "is_cape_target") and function.is_cape_target]
@@ -166,6 +203,9 @@ if __name__ == "__main__":
         for target in targets:
             target()
     except Exception as e:
-        print(str(e))
+        print(traceback.format_exc(), end="")
         print("cape: *** terminating")
         exit(1)
+
+if __name__ == "__main__":
+    main()
