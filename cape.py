@@ -164,7 +164,7 @@ def target_up_to_date(expanded_prerequesties, outputs):
 def target(*prerequesties):
     def decorator(recipe_factory):
         def make():
-            expanded_prerequesties = []
+            expanded_prerequesties = ["build.py"]
 
             for prerequisite in prerequesties:
                 if type(prerequisite) is str:
